@@ -75,6 +75,11 @@ class DataBase:
         except Exception as ex:
             print(f'Error {ex}')
 
+        del self.titles
+        del self.content
+        del self.data
+        del self.url
+
     def validate_fields(self, fields: str) -> list[str]:
         result = []
         for field in fields.split(','):
@@ -93,19 +98,28 @@ class DataBase:
         if not self.conn:
             self.conn = await self.create_connector()
         valid_fields = self.validate_fields(fields)
+        valid_fields_str = (f'({", ".join(valid_fields)})' if valid_fields
+                            else '*')
         limit = f'LIMIT {limit}' if limit is not None and limit >= 0 else ''
         offset = (f'OFFSET {offset}' if offset is not None and
                                         offset >= 0 else '')
-        sql = f"SELECT ({', '.join(valid_fields)}) FROM Data {limit} {offset}"
+        sql = f"SELECT {valid_fields_str} FROM Data {limit} {offset}"
         return valid_fields, await self.conn.fetch(sql)
 
-    async def select_data(self, fields: str = '') -> dict:
+    async def select_data(self, id: int, fields: str = '') -> dict:
         if not self.conn:
             self.conn = await self.create_connector()
         valid_fields = self.validate_fields(fields)
-        sql = f"SELECT ({', '.join(valid_fields)}) FROM Data"
-        return {i: x for i, x in
-                zip(valid_fields, (await self.conn.fetchrow(sql))['row'])}
+        valid_fields_str = (f'({", ".join(valid_fields)})' if valid_fields
+                            else '*')
+        sql = f"SELECT {valid_fields_str} FROM Data WHERE id = $1"
+        data = (await self.conn.fetchrow(sql, id))
+        if data:
+            if fields:
+                return {i: x for i, x in
+                        zip(valid_fields, data['row'])}
+            return dict(data)
+        return {'error': f'no item number {id}'}
 
     async def stop_db(self):
         if self.conn:

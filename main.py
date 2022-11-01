@@ -30,17 +30,35 @@ async def root():
 
 
 @app.get("/list/")
-async def show_list(fields=None, limit: int = None, offset: int = None):
-    fields, data = await db.select_datas(fields, limit, offset)
+async def show_list(fields='', limit: int = 300, offset: int = None):
+    fields, data = await db.select_datas(fields, min(limit, 300), offset)
     result = dict(count=len(data), items=[])
-    for item in data:
-        now_item = {}
-        for name, value in zip(fields, item['row']):
-            now_item[name] = value
-        result['items'].append(now_item)
+    if fields:
+        for item in data:
+            now_item = {}
+            for name, value in zip(fields, item['row']):
+                now_item[name] = value
+            result['items'].append(now_item)
+    else:
+        result['items'] = [dict(item) for item in data]
     return result
 
 
+@app.post("/list/")
+async def create_item():
+    return {'status': 'ok', 'info': 'Fake post done'}
+
+
 @app.get("/list/{id}/")
-async def show_list(fields=None):
-    return await db.select_data(fields=fields)
+async def show_list_item(id: int, fields=''):
+    return await db.select_data(id, fields=fields)
+
+
+@app.put("/list/{id}/")
+async def update_list_item(id: int):
+    return {'status': 'ok', 'info': f'Fake post {id} update'}
+
+
+@app.delete("/list/{id}/")
+async def update_list_item(id: int):
+    return {'status': 'ok', 'info': f'Fake post {id} delete'}
